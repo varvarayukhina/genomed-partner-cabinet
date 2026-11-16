@@ -7,7 +7,16 @@ import { CATALOG } from './data.js';
 
 export const emptyForm = () => ({
   patient: { last: '', first: '', middle: '', dob: '', dobText: '', sex: '', phone: '', email: '' },
-  codes: [], bm: {}, participants: [], clinical: {}, collectedAt: '', collectedTime: '', doctor: '', comment: '', card: '', files: [],
+  codes: [],
+  bm: {},
+  participants: [],
+  clinical: {},
+  collectedAt: '',
+  collectedTime: '',
+  doctor: '',
+  comment: '',
+  card: '',
+  files: [],
 });
 const formHasContent = (f) => f && (f.codes.length || f.patient.last || f.patient.first);
 
@@ -19,7 +28,11 @@ export function startOrder(prefill, hash = '#/new') {
     update((s) => (s.formDraft = { ...emptyForm(), ...prefill }));
     go(hash);
   };
-  if (!formHasContent(cur) || JSON.stringify(cur.codes) === JSON.stringify(prefill.codes) && cur.patient.last === prefill.patient?.last) return apply();
+  if (
+    !formHasContent(cur) ||
+    (JSON.stringify(cur.codes) === JSON.stringify(prefill.codes) && cur.patient.last === prefill.patient?.last)
+  )
+    return apply();
   askReplace({ cur, apply });
 }
 
@@ -30,18 +43,37 @@ export function ReplaceDialog() {
   const { cur, apply } = ask;
   const who = cur.patient.last ? `${cur.patient.last} ${cur.patient.first}`.trim() : 'без пациента';
   const close = () => setAsk(null);
-  return html`<${Dialog} title="Есть незавершённый заказ" onClose=${close} footer=${html`
-    <button class="btn btn--line" onClick=${close}>Вернуться к нему</button>
-    <button class="btn btn--line" onClick=${() => { close(); apply(); }}>Заменить</button>
-    <button class="btn btn--primary" onClick=${() => {
-      const o = saveOrder({ ...cur, patient: { ...cur.patient } }, true);
-      toast(`Незавершённый заказ сохранён как черновик ${o.id}`);
-      close(); apply();
-    }}>Сохранить его в черновики</button>`}>
-    <p>Вы оформляете заказ: ${who}, ${cur.codes.length} исследований. Сохраните его в черновики, чтобы не потерять, или замените новым.</p>
+  return html`<${Dialog}
+    title="Есть незавершённый заказ"
+    onClose=${close}
+    footer=${html` <button class="btn btn--line" onClick=${close}>Вернуться к нему</button>
+      <button
+        class="btn btn--line"
+        onClick=${() => {
+          close();
+          apply();
+        }}
+      >
+        Заменить
+      </button>
+      <button
+        class="btn btn--primary"
+        onClick=${() => {
+          const o = saveOrder({ ...cur, patient: { ...cur.patient } }, true);
+          toast(`Незавершённый заказ сохранён как черновик ${o.id}`);
+          close();
+          apply();
+        }}
+      >
+        Сохранить его в черновики
+      </button>`}
+  >
+    <p>
+      Вы оформляете заказ: ${who}, ${cur.codes.length} исследований. Сохраните его в черновики, чтобы не потерять, или
+      замените новым.
+    </p>
   <//>`;
 }
-
 
 // Add tests to the in-progress order from anywhere (catalog, promo, retake).
 export function addToDraft(codes) {

@@ -1,6 +1,21 @@
 // Run: node tests/logic.test.mjs  — checks the business rules behind the wish list.
 import assert from 'node:assert/strict';
-import { maskDate, parseDate, validateDob, aggregateTubes, orderTubeGroups, tubeBarcodes, editLock, resultStatus, orderTotal, priceOf, prenatalErrors, courierDateError, maskPhone, toCsv } from '../js/logic.js';
+import {
+  maskDate,
+  parseDate,
+  validateDob,
+  aggregateTubes,
+  orderTubeGroups,
+  tubeBarcodes,
+  editLock,
+  resultStatus,
+  orderTotal,
+  priceOf,
+  prenatalErrors,
+  courierDateError,
+  maskPhone,
+  toCsv,
+} from '../js/logic.js';
 import { CATALOG, seed } from '../js/data.js';
 
 // #10 birth date without dots
@@ -16,15 +31,33 @@ assert.equal(maskPhone('89001234567'), '+7 (900) 123-45-67');
 
 // #11 tubes come from tests: NIPT + thrombophilia = 1 Streck + 1 EDTA; two PCR tests share one EDTA tube
 let t = aggregateTubes(['1724', '0402'], CATALOG);
-assert.deepEqual(t.map((x) => [x.tube, x.qty]), [['streck', 1], ['edta', 1]]);
+assert.deepEqual(
+  t.map((x) => [x.tube, x.qty]),
+  [
+    ['streck', 1],
+    ['edta', 1],
+  ],
+);
 t = aggregateTubes(['0402', '0002', '0554'], CATALOG); // pcr pool shares, ngs pool separate
-assert.deepEqual(t.map((x) => [x.tube, x.qty]), [['edta', 2]]);
+assert.deepEqual(
+  t.map((x) => [x.tube, x.qty]),
+  [['edta', 2]],
+);
 t = aggregateTubes(['0005'], CATALOG, { '0005': 'buccal' }); // chosen alternative biomaterial
-assert.deepEqual(t.map((x) => x.tube), ['buccal']);
+assert.deepEqual(
+  t.map((x) => x.tube),
+  ['buccal'],
+);
 assert.equal(aggregateTubes(['1105'], CATALOG)[0].qty, 2); // Panorama needs two tubes
 const groups = orderTubeGroups(['0020'], CATALOG, {}, [{ role: 'Ребёнок', forCode: '0020' }]);
-assert.deepEqual(groups.map((g) => g.who), [0, 1]); // paternity: a tube for each participant
-assert.deepEqual(tubeBarcodes(10253, groups).map((b) => b.code), ['1025301', '1025302']);
+assert.deepEqual(
+  groups.map((g) => g.who),
+  [0, 1],
+); // paternity: a tube for each participant
+assert.deepEqual(
+  tubeBarcodes(10253, groups).map((b) => b.code),
+  ['1025301', '1025302'],
+);
 
 // #6 edit until the courier is called; paper orders read-only
 assert.equal(editLock({ source: 'lkp', status: 'saved' }), '');
@@ -37,7 +70,10 @@ assert.equal(resultStatus({ tests: [{ resultAt: '2026-11-01' }, { resultAt: '' }
 // bundle: 1681 auto-added to 1724 is not charged twice
 const promos = [];
 assert.equal(orderTotal(['1724', '1681'], CATALOG, promos, '2026-11-17'), CATALOG.find((c) => c.code === '1724').price);
-assert.equal(priceOf({ code: '1724', price: 1000 }, [{ codes: ['1724'], pct: 15, until: '2026-11-30' }], '2026-11-17').price, 850);
+assert.equal(
+  priceOf({ code: '1724', price: 1000 }, [{ codes: ['1724'], pct: 15, until: '2026-11-30' }], '2026-11-17').price,
+  850,
+);
 
 // NIPT rules explained, not silent
 assert.match(prenatalErrors({ weeks: 9 }).weeks, /10 недель/);

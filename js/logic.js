@@ -18,7 +18,8 @@ const NBSP = ' ';
 export const money = (n) => `${Math.round(n).toLocaleString('ru-RU').replace(/\s/g, NBSP)}${NBSP}₽`;
 
 export function plural(n, one, few, many) {
-  const m10 = n % 10, m100 = n % 100;
+  const m10 = n % 10,
+    m100 = n % 100;
   if (m10 === 1 && m100 !== 11) return one;
   if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
   return many;
@@ -45,7 +46,8 @@ export function addWorkdays(iso, n) {
   }
   return isoDate(d);
 }
-export const shortName = (p) => `${p.last || 'Без фамилии'}${p.first ? ` ${p.first[0]}.` : ''}${p.middle ? ` ${p.middle[0]}.` : ''}`;
+export const shortName = (p) =>
+  `${p.last || 'Без фамилии'}${p.first ? ` ${p.first[0]}.` : ''}${p.middle ? ` ${p.middle[0]}.` : ''}`;
 export const fullName = (p) => [p.last, p.first, p.middle].filter(Boolean).join(' ');
 
 /* ---------- date input without dots (ТЗ п. 10) ---------- */
@@ -150,7 +152,8 @@ export function orderTubeGroups(codes, catalog, choice = {}, participants = []) 
 export function tubeBarcodes(orderNum, groups) {
   const out = [];
   let i = 1;
-  for (const t of groups) for (let k = 0; k < t.qty; k++) out.push({ tube: t.tube, who: t.who || 0, code: `${orderNum}${pad(i++)}` });
+  for (const t of groups)
+    for (let k = 0; k < t.qty; k++) out.push({ tube: t.tube, who: t.who || 0, code: `${orderNum}${pad(i++)}` });
   return out;
 }
 
@@ -158,11 +161,14 @@ export function tubeBarcodes(orderNum, groups) {
 
 export function priceOf(test, promos, todayIso) {
   const p = promos.find((x) => x.codes.includes(test.code) && x.until >= todayIso && x.pct);
-  return p ? { price: Math.round(test.price * (1 - p.pct / 100)), base: test.price, promo: p } : { price: test.price, base: test.price };
+  return p
+    ? { price: Math.round(test.price * (1 - p.pct / 100)), base: test.price, promo: p }
+    : { price: test.price, base: test.price };
 }
 
 // A test auto-added by another one (`adds`) is part of that bundle and is not charged separately.
-export const bundledIn = (code, codes, catalog) => catalog.find((t) => codes.includes(t.code) && t.adds?.includes(code));
+export const bundledIn = (code, codes, catalog) =>
+  catalog.find((t) => codes.includes(t.code) && t.adds?.includes(code));
 
 export function orderTotal(codes, catalog, promos, todayIso) {
   return codes.reduce((s, c) => {
@@ -175,10 +181,10 @@ export function orderTotal(codes, catalog, promos, todayIso) {
 
 // ТЗ п. 6: edit after save and until the courier is called.
 export function editLock(order) {
-  if (order.source === 'paper') return 'Заказ поступил на бумажном бланке. Изменения — через менеджера.';
+  if (order.source === 'paper') return 'Заказ поступил на бумажном бланке. Изменить его может менеджер.';
   if (order.status === 'courier') return 'Курьер уже вызван. Отмените вызов, чтобы изменить заказ.';
   if (order.status === 'cancelled') return 'Заказ отменён.';
-  if (!['draft', 'saved'].includes(order.status)) return 'Биоматериал уже у лаборатории — заказ изменить нельзя.';
+  if (!['draft', 'saved'].includes(order.status)) return 'Биоматериал уже у лаборатории, заказ изменить нельзя.';
   return '';
 }
 
@@ -197,18 +203,26 @@ export function rawDataEligible(order, catalog) {
 export function resultStatus(order) {
   const ready = order.tests.filter((t) => t.resultAt).length;
   if (ready === 0) return { key: 'wait', label: 'Ожидается', tone: 'neutral' };
-  if (ready < order.tests.length) return { key: 'partial', label: `Готово ${ready} из ${order.tests.length}`, tone: 'teal' };
+  if (ready < order.tests.length)
+    return { key: 'partial', label: `Готово ${ready} из ${order.tests.length}`, tone: 'teal' };
   return { key: 'ready', label: 'Готово', tone: 'ok' };
 }
 
 /* ---------- search ---------- */
 
-export const norm = (s) => s.toLowerCase().replace(/ё/g, 'е').replace(/[^a-zа-я0-9]+/g, ' ').trim();
+export const norm = (s) =>
+  s
+    .toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(/[^a-zа-я0-9]+/g, ' ')
+    .trim();
 
 export function matchTest(test, q) {
   const n = norm(q);
   if (!n) return true;
-  const hay = norm(`${test.code} ${test.name} ${test.short} ${(test.genes || []).join(' ')} ${(test.aka || []).join(' ')}`);
+  const hay = norm(
+    `${test.code} ${test.name} ${test.short} ${(test.genes || []).join(' ')} ${(test.aka || []).join(' ')}`,
+  );
   return n.split(' ').every((w) => hay.includes(w));
 }
 
@@ -217,7 +231,9 @@ export function matchOrder(order, q, catalog) {
   if (!n) return true;
   const names = order.tests.map((t) => catalog.find((c) => c.code === t.code)?.short || '').join(' ');
   const codes = order.tests.map((t) => t.code).join(' ');
-  const hay = norm(`${order.id} ${order.num} ${fullName(order.patient)} ${names} ${codes} ${order.tubes.map((t) => t.code).join(' ')}`);
+  const hay = norm(
+    `${order.id} ${order.num} ${fullName(order.patient)} ${names} ${codes} ${order.tubes.map((t) => t.code).join(' ')}`,
+  );
   return n.split(' ').every((w) => hay.includes(w));
 }
 
@@ -237,17 +253,20 @@ export function toCsv(rows) {
 export function prenatalErrors(c) {
   const e = {};
   if (c.weeks === '' || c.weeks === undefined) e.weeks = 'Укажите срок по УЗИ';
-  else if (Number(c.weeks) < 10) e.weeks = 'НИПТ оформляется со срока 10 недель по УЗИ. Пациентку можно записать позже.';
+  else if (Number(c.weeks) < 10)
+    e.weeks = 'НИПТ оформляется со срока 10 недель по УЗИ. Пациентку можно записать позже.';
   else if (Number(c.weeks) > 40) e.weeks = 'Проверьте срок: больше 40 недель';
-  if (c.days !== '' && c.days !== undefined && (Number(c.days) < 0 || Number(c.days) > 6)) e.days = 'Дни — от 0 до 6';
+  if (c.days !== '' && c.days !== undefined && (Number(c.days) < 0 || Number(c.days) > 6)) e.days = 'Дни: от 0 до 6';
   if (!c.weight) e.weight = 'Укажите вес';
   if (!c.height) e.height = 'Укажите рост';
   if (!c.fetuses) e.fetuses = 'Выберите вариант';
-  else if (c.fetuses === 'multi') e.fetuses = 'При многоплодной беременности этот тест не оформляется. Уточните альтернативу у менеджера.';
+  else if (c.fetuses === 'multi')
+    e.fetuses = 'При многоплодной беременности этот тест не оформляется. Уточните альтернативу у менеджера.';
   if (!c.reduction) e.reduction = 'Выберите вариант';
   else if (c.reduction === 'yes') e.reduction = 'После редукции эмбриона тест не оформляется.';
   if (!c.transplant) e.transplant = 'Выберите вариант';
-  else if (c.transplant === 'yes') e.transplant = 'После пересадки костного мозга или стволовых клеток тест не оформляется.';
+  else if (c.transplant === 'yes')
+    e.transplant = 'После пересадки костного мозга или стволовых клеток тест не оформляется.';
   if (!c.donor) e.donor = 'Выберите вариант';
   if (!c.sexFetus) e.sexFetus = 'Выберите вариант';
   return e;
@@ -262,7 +281,8 @@ export function courierDateError(iso, todayIso, hourNow) {
   if (iso < todayIso) return 'Дата уже прошла';
   const day = fromIso(iso).getDay();
   if (day === 0 || day === 6) return 'Курьеры не выезжают в выходные';
-  if (iso === todayIso && hourNow >= COURIER_CUTOFF) return `Заявки на сегодня принимаются до ${COURIER_CUTOFF}:00 — выберите завтрашний день`;
+  if (iso === todayIso && hourNow >= COURIER_CUTOFF)
+    return `Заявки на сегодня принимаются до ${COURIER_CUTOFF}:00. Выберите завтрашний день`;
   return '';
 }
 

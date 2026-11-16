@@ -78,8 +78,15 @@ export function counters(s = state) {
 
 // form: { patient, codes, bm, participants, clinical, collectedAt, doctor, comment, card, files, editId?, retakeOf? }
 const fields = (f) => ({
-  patient: { ...f.patient }, clinical: { ...f.clinical }, bm: { ...f.bm }, participants: f.participants.map((x) => ({ ...x })),
-  collectedAt: f.collectedAt, doctor: f.doctor, comment: f.comment, card: f.card, files: [...(f.files || [])],
+  patient: { ...f.patient },
+  clinical: { ...f.clinical },
+  bm: { ...f.bm },
+  participants: f.participants.map((x) => ({ ...x })),
+  collectedAt: f.collectedAt,
+  doctor: f.doctor,
+  comment: f.comment,
+  card: f.card,
+  files: [...(f.files || [])],
 });
 const tubesFor = (num, f) => tubeBarcodes(num, orderTubeGroups(f.codes, CATALOG, f.bm, f.participants));
 export function saveOrder(form, asDraft = false) {
@@ -88,14 +95,29 @@ export function saveOrder(form, asDraft = false) {
     if (form.editId) {
       order = s.orders.find((o) => o.id === form.editId);
       const before = order.tests.map((t) => t.code).join(',');
-      Object.assign(order, fields(form), { tests: form.codes.map((code) => ({ code, resultAt: '' })), status: asDraft ? 'draft' : 'saved' });
+      Object.assign(order, fields(form), {
+        tests: form.codes.map((code) => ({ code, resultAt: '' })),
+        status: asDraft ? 'draft' : 'saved',
+      });
       order.tubes = asDraft ? [] : tubesFor(order.num, form);
-      log(order, before !== form.codes.join(',') ? 'Заказ изменён: обновлён состав исследований — перепечатайте этикетки' : 'Заказ изменён');
+      log(
+        order,
+        before !== form.codes.join(',')
+          ? 'Заказ изменён: обновлён состав исследований. Перепечатайте этикетки'
+          : 'Заказ изменён',
+      );
     } else {
       const num = s.nextNum++;
       order = {
-        id: `ЗК-${num}`, num, source: 'lkp', status: asDraft ? 'draft' : 'saved', createdAt: nowStamp(),
-        ...fields(form), tests: form.codes.map((code) => ({ code, resultAt: '' })), history: [], resultsSeen: true,
+        id: `ЗК-${num}`,
+        num,
+        source: 'lkp',
+        status: asDraft ? 'draft' : 'saved',
+        createdAt: nowStamp(),
+        ...fields(form),
+        tests: form.codes.map((code) => ({ code, resultAt: '' })),
+        history: [],
+        resultsSeen: true,
         tubes: asDraft ? [] : tubesFor(num, form),
       };
       log(order, asDraft ? 'Черновик сохранён' : 'Заказ создан в кабинете');
@@ -146,11 +168,27 @@ export function requestRawData(id, formats, email) {
     const parent = s.orders.find((o) => o.id === id);
     const num = s.nextNum++;
     addon = {
-      id: `ЗК-${num}`, num, source: 'lkp', status: 'lab', addon: true, parentId: parent.id, createdAt: nowStamp(), collectedAt: '',
-      patient: { ...parent.patient }, tests: [{ code: RAW_DATA.code, resultAt: '' }], clinical: {}, bm: {}, participants: [], card: '', doctor: parent.doctor,
-      comment: `Форматы: ${formats.join(', ')}. Отправить на ${email}`, tubes: [], resultsSeen: true, history: [],
+      id: `ЗК-${num}`,
+      num,
+      source: 'lkp',
+      status: 'lab',
+      addon: true,
+      parentId: parent.id,
+      createdAt: nowStamp(),
+      collectedAt: '',
+      patient: { ...parent.patient },
+      tests: [{ code: RAW_DATA.code, resultAt: '' }],
+      clinical: {},
+      bm: {},
+      participants: [],
+      card: '',
+      doctor: parent.doctor,
+      comment: `Форматы: ${formats.join(', ')}. Отправить на ${email}`,
+      tubes: [],
+      resultsSeen: true,
+      history: [],
     };
-    log(addon, `Дозаказ к ${parent.id}: выдача сырых данных — принят в работу сразу, без черновика`);
+    log(addon, `Дозаказ к ${parent.id}: выдача сырых данных. Принят в работу сразу, без черновика`);
     parent.rawDataOrderId = addon.id;
     log(parent, `Дозаказаны сырые данные: ${addon.id}`);
     s.orders.unshift(addon);
@@ -191,7 +229,7 @@ export function cancelCourier(id) {
       const o = s.orders.find((x) => x.id === oid);
       if (o?.status === 'courier') {
         o.status = 'saved';
-        log(o, 'Вызов курьера отменён — заказ снова можно редактировать');
+        log(o, 'Вызов курьера отменён. Заказ снова можно редактировать');
       }
     }
   });
@@ -200,7 +238,14 @@ export function cancelCourier(id) {
 /* ---------- consumables ---------- */
 
 function addSupplies(s, items, courierId, date = '') {
-  const sup = { id: `Р-${219 + s.supplies.filter((x) => x.id >= 'Р-219').length}`, createdAt: nowStamp(), items, status: 'planned', withCourier: courierId || '', date };
+  const sup = {
+    id: `Р-${219 + s.supplies.filter((x) => x.id >= 'Р-219').length}`,
+    createdAt: nowStamp(),
+    items,
+    status: 'planned',
+    withCourier: courierId || '',
+    date,
+  };
   s.supplies.unshift(sup);
   return sup;
 }
@@ -230,7 +275,8 @@ export const supplyById = (id) => CONSUMABLES.find((c) => c.id === id);
 
 /* ---------- notifications & settings ---------- */
 
-export const markRead = (id) => update((s) => s.notifications.forEach((n) => (id === 'all' || n.id === id) && (n.read = true)));
+export const markRead = (id) =>
+  update((s) => s.notifications.forEach((n) => (id === 'all' || n.id === id) && (n.read = true)));
 export const setSetting = (k, v) => update((s) => (s.settings[k] = v));
 export const saveFormDraft = (form) => update((s) => (s.formDraft = { ...form, savedAt: nowStamp() }));
 export const clearFormDraft = () => update((s) => (s.formDraft = null));
