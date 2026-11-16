@@ -90,7 +90,7 @@ assert.ok(s.orders.some((o) => o.source === 'paper') && s.orders.some((o) => o.s
 assert.ok(s.orders.filter((o) => o.addon).every((o) => o.status !== 'draft'));
 assert.ok(s.orders.every((o) => o.tubes.every((b) => /^\d{7}$/.test(b.code))));
 
-assert.ok(toCsv([['a;b', 'c']]).startsWith('﻿"a;b";c'));
+assert.ok(toCsv([['a;b', 'c']]).startsWith('\uFEFF"a;b";c'));
 console.log('logic: all checks passed');
 import { addTest, removeTest } from '../js/logic.js';
 assert.deepEqual(addTest([], '1724', CATALOG), ['1724', '1681']);

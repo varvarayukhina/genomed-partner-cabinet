@@ -245,7 +245,7 @@ export function toCsv(rows) {
     return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
   // BOM + semicolons: Russian-locale Excel opens it in columns without an import dialog.
-  return '﻿' + rows.map((r) => r.map(esc).join(';')).join('\r\n');
+  return '\uFEFF' + rows.map((r) => r.map(esc).join(';')).join('\r\n');
 }
 
 /* ---------- NIPT form rules (taken from the current ЛКП form, shown as explanations, not silent blocks) ---------- */
