@@ -16,7 +16,7 @@ function Barcode({ value, height = 44, width = 1.6 }) {
       width,
       margin: 0,
       fontSize: 13,
-      font: 'JetBrains Mono',
+      font: 'Nunito Sans',
       textMargin: 2,
     });
   }, [value]);
