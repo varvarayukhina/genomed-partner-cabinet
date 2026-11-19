@@ -52,6 +52,7 @@ function validate(f) {
   if (dob) e['p-dob'] = dob;
   if (!p.sex) e['p-sex'] = 'Выберите пол';
   if (!f.codes.length) e['t-search'] = 'Добавьте хотя бы одно исследование';
+  if (!f.doctor?.trim()) e.doctor = 'Выберите направившего врача';
   const tests = f.codes.map((c) => CATALOG.find((t) => t.code === c));
   if (p.sex === 'm' && tests.some((t) => t.needs?.includes('pregnancy')))
     e['p-sex'] = 'НИПТ оформляется на беременную пациентку. Проверьте пол или исследование';
@@ -831,13 +832,20 @@ export function OrderForm({ editId }) {
             <h2 id="sec-d">Врач и комментарий</h2>
           </div>
           <div class="grid2">
-            <${Field} label="Направивший врач" id="doctor">
+            <${Field}
+              label="Направивший врач"
+              req
+              id="doctor"
+              error=${err('doctor')}
+              hint="Нет врача в списке — выберите «Другой врач…», менеджер добавит его."
+            >
               ${doctorOther
                 ? html`<div style="display:flex;gap:8px">
                     <input
                       id="doctor"
                       class="input"
                       placeholder="ФИО, специальность"
+                      aria-invalid=${err('doctor') ? 'true' : undefined}
                       value=${f.doctor}
                       onInput=${(e) => set({ doctor: e.target.value })}
                     />
@@ -855,13 +863,14 @@ export function OrderForm({ editId }) {
                 : html`<select
                     id="doctor"
                     class="select"
+                    aria-invalid=${err('doctor') ? 'true' : undefined}
                     value=${f.doctor}
                     onChange=${(e) =>
                       e.target.value === '__other'
                         ? (setDoctorOther(true), set({ doctor: '' }))
                         : set({ doctor: e.target.value })}
                   >
-                    <option value="">Не указан</option>
+                    <option value="">Выберите врача</option>
                     ${DOCTORS.map((d) => html`<option>${d}</option>`)}
                     <option value="__other">Другой врач…</option>
                   </select>`}

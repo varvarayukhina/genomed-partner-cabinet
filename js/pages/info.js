@@ -2,7 +2,7 @@
 import { useState } from '../vendor/preact-htm.js';
 import { html, Icon, Chip, toast, Empty, TubeDot, timeOf } from '../ui.js';
 import { useStore, markRead, setSetting, resetDemo, TODAY } from '../store.js';
-import { CATALOG, TUBES, PREANALYTICS, LIBRARY, MANAGERS, SUPPORT_PHONE } from '../data.js';
+import { CATALOG, TUBES, PREANALYTICS, LIBRARY, MANAGERS, SUPPORT_PHONE, CONSUMABLES } from '../data.js';
 import { fmtDate, plural, matchTest, norm, addDays, fromIso } from '../logic.js';
 import { addToDraft } from '../flow.js';
 
@@ -183,10 +183,18 @@ export function Library() {
             })}
       </section>
       <div class="stack">
-        <section class="card card__pad stack" style="gap:12px" aria-labelledby="print-h">
-          <h2 id="print-h">Печатные брошюры</h2>
-          <p class="soft">Тираж привезёт курьер вместе с расходными материалами.</p>
-          <a class="btn btn--primary" href="#/supplies"><${Icon} name="package" />Заказать тираж</a>
+        <section class="card card__pad printcard" aria-labelledby="print-h">
+          <span class="printcard__ic" aria-hidden="true"><${Icon} name="truck" /></span>
+          <h2 id="print-h">Нужны печатные брошюры?</h2>
+          <p class="soft">Закажите тираж: привезёт курьер вместе с расходниками.</p>
+          <ul class="printcard__list">
+            ${BROCHURES.map(
+              (b) => html`<li><span>${b.name}</span><span class="printcard__qty">${b.pack.replace('пачка ', '')}</span></li>`,
+            )}
+          </ul>
+          <a class="btn btn--primary btn--block" href=${`#/supplies?add=${BROCHURES.map((b) => b.id).join(',')}`}
+            >Заказать тираж</a
+          >
         </section>
         <section class="card card__pad stack" style="gap:10px" aria-labelledby="top-h">
           <h3 id="top-h">Часто скачивают</h3>
@@ -201,6 +209,8 @@ export function Library() {
     </div>
   </div>`;
 }
+
+const BROCHURES = CONSUMABLES.filter((c) => c.group === 'Брошюры для пациентов');
 
 /* ---------- Мои менеджеры ---------- */
 export function Managers() {

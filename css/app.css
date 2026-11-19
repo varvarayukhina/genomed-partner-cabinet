@@ -462,6 +462,7 @@ button {
   padding: 28px 32px 64px;
   width: 100%;
   max-width: 1480px;
+  margin-inline: auto;
 }
 .page__head {
   display: flex;
@@ -2713,6 +2714,64 @@ dialog.dlg[open] {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+.printcard {
+  display: grid;
+  gap: 12px;
+}
+.printcard__ic {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: var(--blue-light);
+  color: var(--blue-2);
+}
+.printcard__ic .ico {
+  width: 24px;
+  height: 24px;
+}
+.printcard__list {
+  margin: 0 0 4px;
+  padding: 0;
+  list-style: none;
+}
+.printcard__list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+.printcard__qty {
+  flex: none;
+  padding: 4px 10px;
+  border-radius: var(--radius-s);
+  background: var(--page-bg);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.dbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.dbar__track {
+  flex: 0 0 120px;
+  height: 10px;
+}
+.dbar__fill {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  background: var(--viz-1);
+  border-radius: 0 4px 4px 0;
+}
+.dbar b {
+  min-width: 3ch;
+  text-align: right;
+}
 .pgt-extra {
   margin-top: 16px;
 }
@@ -2828,6 +2887,188 @@ dialog.dlg[open] {
   margin: 0 0 3mm;
   text-align: justify;
 }
+/* closing documents: header as in Genomed emails, quiet tables, ЭДО signatures */
+@media print {
+  /* the whole print tree on the named page, or Chrome starts with an empty page */
+  body:has(#print-root .cdoc),
+  #print-root:has(.cdoc),
+  .cdoc {
+    page: cdoc;
+  }
+  @page cdoc {
+    size: A4;
+    margin: 14mm 14mm 16mm;
+    @bottom-left {
+      content: 'Демо-образец. В рабочей версии здесь будут документы из ЭДО с реквизитами и подписями сторон.';
+      font: 400 8pt 'Nunito Sans', sans-serif;
+      color: #2e4a6b;
+    }
+    @bottom-right {
+      content: 'Стр. ' counter(page) ' из ' counter(pages);
+      font: 400 8pt 'Nunito Sans', sans-serif;
+      color: #2e4a6b;
+    }
+  }
+}
+.cdoc {
+  color: #0a2540;
+  font-weight: 400;
+  font-size: 10pt;
+  line-height: 1.45;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.cdoc p {
+  margin: 0 0 3mm;
+}
+.cdoc__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8mm;
+  padding-bottom: 3mm;
+  margin-bottom: 4mm;
+  border-bottom: 1px solid #dce6f5;
+  font-size: 8.5pt;
+  line-height: 1.5;
+  color: #2e4a6b;
+  text-align: right;
+}
+.cdoc__head img {
+  display: block;
+  width: 26mm;
+}
+.cdoc .cdoc__label {
+  margin: 0 0 2mm;
+  font-size: 8.5pt;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0046cc;
+}
+.cdoc h1 {
+  margin: 0 0 1mm;
+  font-size: 17pt;
+  line-height: 1.2;
+  font-weight: 700;
+  color: #0a2540;
+}
+.cdoc .cdoc__sub {
+  margin: 0 0 4mm;
+  color: #2e4a6b;
+}
+.cdoc__parties,
+.cdoc__signs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4mm;
+}
+.cdoc__parties > div,
+.cdoc__signs > div {
+  padding: 2.8mm 4.5mm;
+  border-radius: 3mm;
+  font-size: 9pt;
+  color: #2e4a6b;
+}
+.cdoc__parties > div {
+  background: #eef4ff;
+}
+.cdoc__parties span,
+.cdoc__signs span {
+  display: block;
+  margin-bottom: 1mm;
+  font-size: 7.5pt;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.cdoc__parties b,
+.cdoc__signs b {
+  display: block;
+  font-size: 10.5pt;
+  font-weight: 700;
+  color: #0a2540;
+}
+.cdoc .cdoc__basis {
+  margin: 2mm 0 3.5mm;
+  font-size: 9pt;
+  color: #2e4a6b;
+}
+.cdoc .cdoc__t {
+  width: 100%;
+  margin: 0 0 5mm;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 8.5pt;
+  line-height: 1.35;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.cdoc .cdoc__t th,
+.cdoc .cdoc__t td {
+  padding: 1.2mm 2.5mm;
+  border: 0;
+  border-bottom: 0.5pt solid #dce6f5;
+  text-align: left;
+  vertical-align: top;
+}
+.cdoc .cdoc__t th {
+  background: #eef4ff;
+  border-bottom: 0;
+  font-size: 8.5pt;
+  font-weight: 700;
+  color: #2e4a6b;
+}
+.cdoc .cdoc__t th:first-child {
+  border-radius: 2mm 0 0 2mm;
+}
+.cdoc .cdoc__t th:last-child {
+  border-radius: 0 2mm 2mm 0;
+}
+.cdoc .cdoc__t .r {
+  text-align: right;
+  white-space: nowrap;
+}
+.cdoc__t tr {
+  break-inside: avoid;
+}
+.cdoc__t small {
+  display: block;
+  font-size: 8pt;
+  color: #2e4a6b;
+}
+.cdoc .cdoc__t .cdoc__total td {
+  padding-top: 3mm;
+  border-top: 1.5pt solid #0a2540;
+  border-bottom: 0;
+  font-size: 10.5pt;
+  font-weight: 700;
+}
+.cdoc__signs {
+  margin-top: 5mm;
+  break-inside: avoid;
+}
+.cdoc__signs > div {
+  padding: 2.5mm 4mm;
+  border: 1pt dashed #9aaac0;
+}
+.cdoc__signs span,
+.cdoc__signs b {
+  display: inline;
+  margin-right: 2mm;
+}
+.cdoc__signs > div.is-ok {
+  border: 1pt solid #0046cc;
+}
+.cdoc__signs i {
+  display: block;
+  margin-top: 1mm;
+  font-style: normal;
+}
+.cdoc__signs .is-ok i {
+  color: #0046cc;
+  font-weight: 700;
+}
 .labels {
   display: grid;
   gap: 3mm;
@@ -2942,6 +3183,13 @@ dialog.dlg[open] {
   .hchart__row {
     grid-template-columns: minmax(0, 1fr);
     gap: 6px;
+  }
+  .t.t--cards .dbar {
+    display: inline-flex;
+    vertical-align: middle;
+  }
+  .dbar__track {
+    flex-basis: 80px;
   }
   .top {
     padding: 10px 16px;

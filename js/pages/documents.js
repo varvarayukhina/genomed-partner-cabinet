@@ -1,18 +1,28 @@
 import { useState } from '../vendor/preact-htm.js';
-import { html, Icon, Dialog, Field, toast, download } from '../ui.js';
-import { useStore, TODAY, nowStamp } from '../store.js';
-import { money, fmtDate, toCsv } from '../logic.js';
+import { html, Icon, Chip, Dialog, Field, toast, download } from '../ui.js';
+import { useStore, TODAY } from '../store.js';
+import { money, fmtDate, toCsv, pad, plural } from '../logic.js';
+import { SUPPORT_PHONE } from '../data.js';
 import { printNode } from '../print.js';
 import { HISTORY_MONTHS, monthLines, monthName } from './analytics.js';
 
 const CUR = TODAY.slice(0, 7);
 const ALL = [...HISTORY_MONTHS, CUR]; // oldest first
 const LAST_CLOSED = HISTORY_MONTHS.at(-1);
+const SELLER = 'ООО «Геномед»';
 const cap = (t) => t[0].toUpperCase() + t.slice(1);
 const mmyy = (ym) => `${ym.slice(5)}/${ym.slice(2, 4)}`;
 const lastDay = (ym) => `${ym}-${new Date(Number(ym.slice(0, 4)), Number(ym.slice(5)), 0).getDate()}`;
 const periodName = (from, to) => (from === to ? monthName(from) : `${monthName(from)} — ${monthName(to)}`);
 const fileTag = (s, from, to) => `${s.clinic.partnerId}-${from}${from === to ? '' : `_${to}`}`;
+const docNo = (s, ym) => `${s.clinic.partnerId}-${mmyy(ym)}`;
+const nextMonthDay = (ym, d) => {
+  const x = new Date(Number(ym.slice(0, 4)), Number(ym.slice(5)), d);
+  return `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(d)}`;
+};
+
+// Demo ЭДО: Геномед signs on the 3rd of the next month, the clinic on the 6th; the last closed month waits for the clinic.
+const edo = (ym) => ({ gm: nextMonthDay(ym, 3), cl: ym === LAST_CLOSED ? null : nextMonthDay(ym, 6) });
 
 function collect(s, from, to) {
   const parts = ALL.filter((ym) => ym >= from && ym <= to).map((ym) => monthLines(s, ym));
@@ -23,70 +33,170 @@ function collect(s, from, to) {
   };
 }
 
-function Act({ s, from, to, data }) {
+/* ---------- printed documents ---------- */
+
+function Head({ ym, title, sub }) {
+  return html`<header class="cdoc__head">
+      <img src="assets/genomed-logo.png" alt="Геномед" />
+      <div>${SELLER} · genomed.ru<br />Клиентский сервис 24/7: ${SUPPORT_PHONE}</div>
+    </header>
+    <p class="cdoc__label">Закрывающие документы · ${monthName(ym)}</p>
+    <h1>${title}</h1>
+    <p class="cdoc__sub">${sub}</p>`;
+}
+
+function Parties({ s, a, b }) {
+  return html`<div class="cdoc__parties">
+      <div><span>${a}</span><b>${SELLER}</b>Реквизиты — по договору</div>
+      <div><span>${b}</span><b>${s.clinic.name}</b>ИНН ${s.clinic.inn}</div>
+    </div>
+    <p class="cdoc__basis">Основание: договор ${s.clinic.contract}</p>`;
+}
+
+function Signs({ s, ym, both }) {
+  const e = edo(ym);
+  const signed = (d) => html`<i>Подписано электронной подписью ${fmtDate(d)}</i>`;
+  return html`<div class="cdoc__signs">
+    <div class="is-ok"><span>Исполнитель</span><b>${SELLER}</b>${signed(e.gm)}</div>
+    ${both &&
+    html`<div class=${e.cl ? 'is-ok' : ''}>
+      <span>Заказчик</span><b>${s.clinic.name}</b>${e.cl ? signed(e.cl) : html`<i>Ожидает подписи в ЭДО</i>`}
+    </div>`}
+  </div>`;
+}
+
+// same code at the same price is one line; promo prices are a separate line
+function Services({ data, total }) {
   const groups = {};
   for (const l of data.lines) (groups[`${l.code}|${l.price}`] ||= { ...l, qty: 0 }).qty++;
   const rows = Object.values(groups).sort((a, b) => a.code.localeCompare(b.code) || b.price - a.price);
-  return html`<section class="pdoc">
-    <div class="pdoc__top">
-      <div>
-        <img src="assets/genomed-logo.png" alt="Геномед" />
-        <div class="small">Кабинет партнёра · ${s.clinic.name} · ID ${s.clinic.partnerId}</div>
-      </div>
-      <div class="small" style="text-align:right">Сформировано ${fmtDate(TODAY)} ${nowStamp().slice(11)}</div>
-    </div>
-    <p class="small">Демо-образец. В рабочей версии акт формирует бухгалтерия Геномед по данным учётной системы.</p>
-    <h1>Акт оказанных услуг № ${s.clinic.partnerId}-${mmyy(from)}${from === to ? '' : `–${mmyy(to)}`}</h1>
-    <p>За период с ${fmtDate(`${from}-01`)} по ${fmtDate(lastDay(to))}</p>
-    <table>
-      <tbody>
-        <tr>
-          <th style="width:28%">Исполнитель</th>
-          <td>Геномед, реквизиты по договору</td>
-        </tr>
-        <tr>
-          <th>Заказчик</th>
-          <td>${s.clinic.name}, ИНН ${s.clinic.inn}</td>
-        </tr>
-        <tr>
-          <th>Основание</th>
-          <td>Договор ${s.clinic.contract}</td>
-        </tr>
-      </tbody>
-    </table>
-    <table>
+  return html`<table class="cdoc__t">
+    <colgroup>
+      <col style="width:5%" />
+      <col style="width:8%" />
+      <col />
+      <col style="width:9%" />
+      <col style="width:13%" />
+      <col style="width:15%" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th>№</th>
+        <th>Код</th>
+        <th>Услуга</th>
+        <th class="r">Кол-во</th>
+        <th class="r">Цена</th>
+        <th class="r">Сумма</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rows.map(
+        (r, i) =>
+          html`<tr>
+            <td>${i + 1}</td>
+            <td>${r.code}</td>
+            <td>${r.name}${r.promo && html`<small>цена по акции</small>`}</td>
+            <td class="r">${r.qty}</td>
+            <td class="r">${money(r.price)}</td>
+            <td class="r">${money(r.price * r.qty)}</td>
+          </tr>`,
+      )}
+      <tr class="cdoc__total">
+        <td colspan="5">${total}</td>
+        <td class="r">${money(data.sum)}</td>
+      </tr>
+    </tbody>
+  </table>`;
+}
+
+function Act({ s, ym, data }) {
+  return html`<section class="pdoc cdoc">
+    <${Head}
+      ym=${ym}
+      title=${`Акт оказанных услуг № ${docNo(s, ym)}`}
+      sub=${`от ${fmtDate(lastDay(ym))} · за период с ${fmtDate(`${ym}-01`)} по ${fmtDate(lastDay(ym))}`}
+    />
+    <${Parties} s=${s} a="Исполнитель" b="Заказчик" />
+    <${Services} data=${data} total="Итого" />
+    <p>
+      Всего оказано услуг: ${data.lines.length} (заказов: ${data.orders}) на сумму ${money(data.sum)}. Услуги оказаны
+      полностью и в срок, Заказчик претензий не имеет. Детализация — в реестре исследований к акту.
+    </p>
+    <${Signs} s=${s} ym=${ym} both />
+  </section>`;
+}
+
+function Bill({ s, ym, data }) {
+  return html`<section class="pdoc cdoc">
+    <${Head} ym=${ym} title=${`Счёт на оплату № ${docNo(s, ym)}`} sub=${`от ${fmtDate(lastDay(ym))}`} />
+    <${Parties} s=${s} a="Получатель" b="Плательщик" />
+    <${Services} data=${data} total="К оплате" />
+    <p>Оплата по акту № ${docNo(s, ym)}. Срок оплаты и банковские реквизиты — по договору.</p>
+    <${Signs} s=${s} ym=${ym} />
+  </section>`;
+}
+
+function Registry({ s, ym, data }) {
+  return html`<section class="pdoc cdoc">
+    <${Head}
+      ym=${ym}
+      title="Реестр исследований"
+      sub=${`приложение к акту № ${docNo(s, ym)} от ${fmtDate(lastDay(ym))} · ${s.clinic.name}`}
+    />
+    <table class="cdoc__t">
+      <colgroup>
+        <col style="width:5%" />
+        <col style="width:13%" />
+        <col style="width:12%" />
+        <col style="width:8%" />
+        <col />
+        <col style="width:13%" />
+      </colgroup>
       <thead>
         <tr>
           <th>№</th>
+          <th>Дата</th>
+          <th>Заказ</th>
           <th>Код</th>
-          <th>Услуга</th>
-          <th style="white-space:nowrap">Кол-во</th>
-          <th>Цена</th>
-          <th>Сумма</th>
+          <th>Исследование</th>
+          <th class="r">Цена</th>
         </tr>
       </thead>
       <tbody>
-        ${rows.map(
-          (r, i) =>
+        ${data.lines.map(
+          (l, i) =>
             html`<tr>
               <td>${i + 1}</td>
-              <td>${r.code}</td>
-              <td>${r.name}${r.promo ? ' (цена по акции)' : ''}</td>
-              <td>${r.qty}</td>
-              <td>${money(r.price)}</td>
-              <td>${money(r.price * r.qty)}</td>
+              <td>${fmtDate(l.date)}</td>
+              <td>${l.id}</td>
+              <td>${l.code}</td>
+              <td>${l.name}${l.promo && html`<small>цена по акции</small>`}</td>
+              <td class="r">${money(l.price)}</td>
             </tr>`,
         )}
+        <tr class="cdoc__total">
+          <td colspan="5">
+            Итого: ${data.lines.length} ${plural(data.lines.length, 'исследование', 'исследования', 'исследований')}
+          </td>
+          <td class="r">${money(data.sum)}</td>
+        </tr>
       </tbody>
     </table>
-    <p><b>Итого: ${money(data.sum)}</b>. Заказов: ${data.orders}, услуг: ${data.lines.length}.</p>
-    <p>Услуги оказаны в полном объёме. Заказчик претензий по объёму, качеству и срокам оказания услуг не имеет.</p>
-    <div class="sign">
-      <div>Исполнитель</div>
-      <div>Заказчик</div>
-    </div>
   </section>`;
 }
+
+// one PDF: act, bill and registry for every closed month of the period
+const Pack = ({ s, months }) =>
+  months.map((ym) => {
+    const data = monthLines(s, ym);
+    return html`<${Act} s=${s} ym=${ym} data=${data} /><${Bill} s=${s} ym=${ym} data=${data} /><${Registry}
+        s=${s}
+        ym=${ym}
+        data=${data}
+      />`;
+  });
+
+/* ---------- page ---------- */
 
 function MonthSelect({ id, value, onChange }) {
   return html`<select id=${id} class="select" value=${value} onChange=${(e) => onChange(e.target.value)}>
@@ -96,60 +206,68 @@ function MonthSelect({ id, value, onChange }) {
   </select>`;
 }
 
-function GenDialog({ onClose, onAct, onReg }) {
-  const [f, setF] = useState({ from: LAST_CLOSED, to: LAST_CLOSED, act: true, reg: true });
+function GenDialog({ onClose, onPack, onReg }) {
+  const [f, setF] = useState({ from: LAST_CLOSED, to: LAST_CLOSED, pack: true, reg: false });
   const [tried, setTried] = useState(false);
   const set = (p) => setF({ ...f, ...p });
-  const openMonth = f.to === CUR;
-  const act = f.act && !openMonth;
+  const onlyOpen = f.from === CUR;
+  const pack = f.pack && !onlyOpen;
   const err =
     f.from > f.to
       ? 'Начало периода позже конца. Поменяйте месяцы местами.'
-      : !act && !f.reg
-        ? 'Выберите хотя бы один документ.'
+      : !pack && !f.reg
+        ? 'Выберите хотя бы один вариант.'
         : '';
   const submit = () => {
     setTried(true);
     if (err) return;
     if (f.reg) onReg(f.from, f.to);
-    if (act) onAct(f.from, f.to);
+    if (pack) onPack(f.from, f.to);
     onClose();
   };
   return html`<${Dialog}
-    title="Сформировать документы"
+    title="Скачать документы за период"
     onClose=${onClose}
     footer=${html`<button class="btn btn--line" onClick=${onClose}>Отмена</button>
-      <button class="btn btn--primary" onClick=${submit}><${Icon} name="file-check" />Сформировать</button>`}
+      <button class="btn btn--primary" onClick=${submit}><${Icon} name="file-down" />Скачать</button>`}
   >
     <div class="grid2">
       <${Field} label="С месяца" id="d-from"><${MonthSelect} id="d-from" value=${f.from} onChange=${(v) => set({ from: v })} /><//>
       <${Field} label="По месяц" id="d-to"><${MonthSelect} id="d-to" value=${f.to} onChange=${(v) => set({ to: v })} /><//>
     </div>
     <fieldset class="docpick">
-      <legend>Документы</legend>
+      <legend>Что скачать</legend>
       <label class="switch"
-        ><input type="checkbox" checked=${act} disabled=${openMonth} onChange=${(e) => set({ act: e.target.checked })} />Акт
-        оказанных услуг (PDF)</label
+        ><input type="checkbox" checked=${pack} disabled=${onlyOpen} onChange=${(e) => set({ pack: e.target.checked })} />Пакет
+        документов одним PDF: акт, счёт и реестр за каждый месяц</label
       >
-      ${openMonth &&
+      ${f.to === CUR &&
       html`<p class="muted">
-        ${cap(monthName(CUR))} ещё идёт, акт за него будет после закрытия месяца. Реестр можно скачать уже сейчас.
+        ${cap(monthName(CUR))} ещё идёт: документов из ЭДО за него пока нет. Реестр в Excel можно скачать уже сейчас.
       </p>`}
       <label class="switch"
-        ><input type="checkbox" checked=${f.reg} onChange=${(e) => set({ reg: e.target.checked })} />Реестр исследований
-        (Excel): каждое исследование отдельной строкой с номером заказа</label
+        ><input type="checkbox" checked=${f.reg} onChange=${(e) => set({ reg: e.target.checked })} />Реестр
+        исследований в Excel одной таблицей</label
       >
     </fieldset>
     ${tried && err && html`<div class="field__err" role="alert"><${Icon} name="triangle-alert" />${err}</div>`}
   <//>`;
 }
 
+function EdoStatus({ ym }) {
+  if (ym === CUR) return html`<${Chip} tone="neutral">Месяц идёт<//><div class="muted">документы после закрытия</div>`;
+  const e = edo(ym);
+  return e.cl
+    ? html`<${Chip} tone="ok">Подписаны<//><div class="muted">${fmtDate(e.cl)}</div>`
+    : html`<${Chip} tone="warn">Ждут вашей подписи<//><div class="muted">в ЭДО с ${fmtDate(e.gm)}</div>`;
+}
+
 export function Documents() {
   const s = useStore();
   const [dlg, setDlg] = useState(false);
   const rows = [...ALL].reverse().map((ym) => ({ ym, ...monthLines(s, ym) }));
-  const printAct = (from, to) =>
-    printNode(html`<${Act} s=${s} from=${from} to=${to} data=${collect(s, from, to)} />`);
+  const printPack = (from, to) =>
+    printNode(html`<${Pack} s=${s} months=${HISTORY_MONTHS.filter((ym) => ym >= from && ym <= to)} />`);
   const saveReg = (from, to) => {
     const d = collect(s, from, to);
     download(
@@ -167,11 +285,14 @@ export function Documents() {
     <div class="page__head">
       <div>
         <h1>Закрывающие документы</h1>
-        <p class="page__sub">Акты оказанных услуг и реестры исследований по договору ${s.clinic.contract}</p>
+        <p class="page__sub">
+          Акты, счета и реестры исследований по договору ${s.clinic.contract}. Документы приходят из ЭДО после
+          закрытия месяца.
+        </p>
       </div>
       <div class="page__actions">
         <button class="btn btn--primary" onClick=${() => setDlg(true)}>
-          <${Icon} name="file-check" />Сформировать документы
+          <${Icon} name="file-down" />Скачать за период
         </button>
       </div>
     </div>
@@ -184,35 +305,34 @@ export function Documents() {
               <th>Период</th>
               <th>Заказов</th>
               <th>Сумма</th>
-              <th>Документы</th>
+              <th>ЭДО</th>
+              <th>Скачать</th>
             </tr>
           </thead>
           <tbody>
             ${rows.map(
               (r) =>
                 html`<tr key=${r.ym}>
-                  <td>
-                    <b>${cap(monthName(r.ym))}</b>
-                    ${r.ym === CUR && html`<div class="muted">месяц идёт, акт будет после закрытия</div>`}
-                  </td>
+                  <td><b>${cap(monthName(r.ym))}</b></td>
                   <td class="num" data-l="Заказов">${r.orders}</td>
                   <td class="num" data-l="Сумма">${money(r.sum)}</td>
+                  <td><${EdoStatus} ym=${r.ym} /></td>
                   <td>
                     <div class="docbtns">
                       ${r.ym !== CUR &&
                       html`<button
                         class="btn btn--line btn--sm"
-                        aria-label=${`Акт за ${monthName(r.ym)}, PDF`}
-                        onClick=${() => printAct(r.ym, r.ym)}
+                        aria-label=${`Акт, счёт и реестр за ${monthName(r.ym)}, PDF`}
+                        onClick=${() => printPack(r.ym, r.ym)}
                       >
-                        <${Icon} name="file-down" />Акт
+                        <${Icon} name="file-down" />Пакет PDF
                       </button>`}
                       <button
                         class="btn btn--line btn--sm"
                         aria-label=${`Реестр за ${monthName(r.ym)}, Excel`}
                         onClick=${() => saveReg(r.ym, r.ym)}
                       >
-                        <${Icon} name="file-spreadsheet" />Реестр
+                        <${Icon} name="file-spreadsheet" />Реестр Excel
                       </button>
                     </div>
                   </td>
@@ -223,9 +343,10 @@ export function Documents() {
       </div>
     </div>
     <p class="muted section--tight">
-      Акт открывается в окне печати: там же его можно сохранить в PDF. Нужен акт сверки или документы в другом виде —
-      напишите <a href="#/managers">менеджеру</a>.
+      Пакет PDF: акт, счёт и реестр исследований за месяц. Он открывается в окне печати, там же его можно сохранить в
+      PDF. Подписать документы можно в вашей системе ЭДО. Нужен акт сверки или другой документ — напишите${' '}
+      <a href="#/managers">менеджеру</a>.
     </p>
-    ${dlg && html`<${GenDialog} onClose=${() => setDlg(false)} onAct=${printAct} onReg=${saveReg} />`}
+    ${dlg && html`<${GenDialog} onClose=${() => setDlg(false)} onPack=${printPack} onReg=${saveReg} />`}
   </div>`;
 }

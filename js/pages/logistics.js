@@ -1,5 +1,5 @@
 // Курьер и расходные материалы (ТЗ п. 3).
-import { useState } from '../vendor/preact-htm.js';
+import { useState, useEffect } from '../vendor/preact-htm.js';
 import { html, Icon, Field, DateField, Chip, toast, go, Empty, TubeDot } from '../ui.js';
 import {
   useStore,
@@ -42,7 +42,7 @@ function PlannedCall({ c }) {
   return html`<div class="rowi">
     <div>
       <div class="rowi__title">
-        <${Icon} name="truck" />Курьер приедет ${when(c.date)},
+        <${Icon} name="truck" />Курьер приедет ${when(c.date)},${' '}
         <span class="mono">${fmtDate(c.date)} · ${c.slot}</span> <${Chip} tone="blue">${c.id}<//>
       </div>
       <div class="rowi__text">${s.clinic.addresses[c.address]}</div>
@@ -303,9 +303,15 @@ export function Delivery({ preselect }) {
 
 /* ---------- Расходные материалы ---------- */
 
-export function Supplies({ courier: courier0 }) {
+export function Supplies({ courier: courier0, add }) {
   const s = useStore();
-  const [qty, setQty] = useState({});
+  // ?add=id,id from «Заказать тираж»: one pack of each already in the order
+  const [qty, setQty] = useState(() => Object.fromEntries((add || '').split(',').filter(Boolean).map((id) => [id, 1])));
+  useEffect(() => {
+    const g = add && CONSUMABLES.find((c) => c.id === add.split(',')[0])?.group;
+    // after the router's scroll-to-top on navigation
+    if (g) requestAnimationFrame(() => document.getElementById(`g-${g}`)?.scrollIntoView({ block: 'start' }));
+  }, [add]);
   const planned = s.couriers
     .filter((c) => c.status === 'planned' && !c.consumablesId)
     .sort((a, b) => a.date.localeCompare(b.date));

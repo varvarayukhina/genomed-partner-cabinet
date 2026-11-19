@@ -326,7 +326,7 @@ function Page({ route }) {
     case 'delivery':
       return html`<${Delivery} preselect=${q.orders} />`;
     case 'supplies':
-      return html`<${Supplies} courier=${q.courier} />`;
+      return html`<${Supplies} courier=${q.courier} add=${q.add} />`;
     case 'preanalytics':
       return html`<${Preanalytics} tube=${q.tube} />`;
     case 'promo':

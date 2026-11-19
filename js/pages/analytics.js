@@ -21,7 +21,7 @@ function orderLines(o, promos) {
     .map((code) => {
       const x = testByCode(code);
       const price = x.bm.length ? priceOf(x, promos, day).price : x.price;
-      return { id: o.id, date: day, code, name: x.name, price, promo: price < x.price };
+      return { id: o.id, date: day, code, name: x.name, price, promo: price < x.price, doctor: o.doctor };
     });
 }
 
@@ -162,6 +162,23 @@ export function Analytics() {
   const mix = mixAll.slice(0, 6);
   const rest = mixAll.slice(6).reduce((a, t) => a + t.n, 0);
 
+  // orders per referring doctor: an order counts once, its sum is all its billable lines
+  const byDoc = {};
+  for (const l of months.flatMap((m) => m.lines)) {
+    const d = (byDoc[l.doctor || ''] ||= { name: l.doctor || '', ids: new Set(), sum: 0, codes: {} });
+    d.ids.add(l.id);
+    d.sum += l.price;
+    d.codes[l.code] = (d.codes[l.code] || 0) + 1;
+  }
+  const docs = Object.values(byDoc)
+    .map((d) => ({ ...d, n: d.ids.size, top: Object.entries(d.codes).sort((a, z) => z[1] - a[1])[0][0] }))
+    .sort((a, z) => z.n - a.n);
+  const docMax = Math.max(...docs.map((d) => d.n));
+  const docSplit = (name) => {
+    const [fio, ...spec] = name.split(', ');
+    return [fio || 'Врач не указан', spec.join(', ')];
+  };
+
   const reasons = RETAKE_REASONS.map((r, i) => [r, months.reduce((a, m) => a + m.reasons[i], 0)])
     .filter(([, n]) => n)
     .sort((a, z) => z[1] - a[1]);
@@ -178,6 +195,9 @@ export function Analytics() {
         [],
         ['Показатель', 'Ваша клиника, %', `${b.label}, %`],
         ...compare.map(([name, , mine, avg]) => [name, (mine * 100).toFixed(1), (avg * 100).toFixed(1)]),
+        [],
+        ['Врач', 'Заказов', 'Сумма, ₽', 'Чаще всего назначает'],
+        ...docs.map((d) => [d.name || 'Врач не указан', d.n, d.sum, `${d.top} ${testByCode(d.top).short}`]),
         [],
         ['Код', 'Исследование', 'Количество'],
         ...mixAll.map((t) => [t.code, t.name, t.n]),
@@ -269,6 +289,45 @@ export function Analytics() {
           </table>
         </details>
       </div>
+    </section>
+
+    <section class="section tablewrap" aria-labelledby="doc-h">
+      <div class="card__head"><h2 id="doc-h">Кто направляет</h2></div>
+      <div class="tscroll">
+        <table class="t t--cards">
+          <thead>
+            <tr>
+              <th>Врач</th>
+              <th>Заказов</th>
+              <th>Сумма</th>
+              <th>Чаще всего назначает</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${docs.map((d) => {
+              const [fio, spec] = docSplit(d.name);
+              return html`<tr>
+                <td><b>${fio}</b>${spec && html`<div class="muted">${spec}</div>`}</td>
+                <td class="num" data-l="Заказов">
+                  <div class="dbar">
+                    <span class="dbar__track" aria-hidden="true"
+                      ><span class="dbar__fill" style=${`width:${(d.n / docMax) * 100}%`}></span></span
+                    ><b>${d.n}</b>
+                  </div>
+                </td>
+                <td class="num" data-l="Сумма">${money(d.sum)}</td>
+                <td data-l="Чаще всего">
+                  <span class="code">${d.top}</span> ${testByCode(d.top).short}
+                </td>
+              </tr>`;
+            })}
+          </tbody>
+        </table>
+      </div>
+      <p class="card__pad muted">
+        По полю «Направивший врач» в заказе. Список врачей ведёт Геномед: добавить или убрать врача можно через${' '}
+        <a href="#/managers">менеджера</a>. В рабочей версии этот блок видит только руководитель клиники.
+      </p>
     </section>
 
     <div class="grid2 section">

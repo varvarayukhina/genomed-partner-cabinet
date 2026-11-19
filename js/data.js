@@ -605,6 +605,8 @@ export const DOCTORS = [
   'Соколов А. В., онколог',
   'Ким Л. Р., врач-генетик',
   'Демидова Н. С., терапевт',
+  'Орлова М. А., репродуктолог',
+  'Фролова Т. Г., акушер-гинеколог',
 ];
 
 // [num, daysAgo, patientIdx, codes, status, source, extra]
@@ -1080,6 +1082,8 @@ export const MONTHS = ['январь', 'февраль', 'март', 'апрел
 const MIX = [['1724', 9], ['0402', 7], ['1105', 6], ['0006', 5], ['0005', 4], ['0002', 4], ['1438', 3], ['0013', 2], ['0721', 2], ['0856', 1]];
 export const RETAKE_REASONS = ['Гемолиз', 'Сгусток в пробирке', 'Мало биоматериала', 'Низкая фетальная фракция', 'Превышен срок доставки', 'Данные на пробирке и бланке не совпадают'];
 const RETAKE_W = [5, 4, 3, 2, 2, 1];
+// category -> [main, second] index in DOCTORS: who usually refers for this kind of test
+const DOC_BY_CAT = [[0, 5], [1, 3], [4, 0], [2, 3], [3, 1], [2, 4], [2, 3]];
 
 export function history(today) {
   let x = 41203;
@@ -1094,6 +1098,10 @@ export function history(today) {
       const ym = addDays(today, -o[1]).slice(0, 7);
       seeded[ym] = (seeded[ym] || 0) + 1;
     }
+  // own generator for doctors, so the order counts above stay the same
+  let z = 7919;
+  const rnd2 = () => (z = (z * 16807) % 2147483647) / 2147483647;
+  const docOf = (code) => DOCTORS[DOC_BY_CAT[CATALOG.find((c) => c.code === code).cat][rnd2() < 0.75 ? 0 : 1]];
   let num = Math.min(...ORDERS.map((o) => o[0]));
   const [y0, m0] = today.split('-').map(Number);
   const out = [];
@@ -1114,7 +1122,12 @@ export function history(today) {
       ym,
       y,
       m,
-      orders: codes.map((code, k) => ({ id: `ЗК-${num + k}`, date: `${ym}-${pad(1 + Math.floor((k / n) * days))}`, code })),
+      orders: codes.map((code, k) => ({
+        id: `ЗК-${num + k}`,
+        date: `${ym}-${pad(1 + Math.floor((k / n) * days))}`,
+        code,
+        doctor: docOf(code),
+      })),
       reasons,
       retakeShare: retakes / total,
       onTimeShare: 1 - (0.02 + rnd() * 0.05),
