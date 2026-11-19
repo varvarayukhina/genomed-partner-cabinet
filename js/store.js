@@ -3,7 +3,7 @@ import { useEffect, useReducer } from './vendor/preact-htm.js';
 import { seed, CATALOG, RAW_DATA, CONSUMABLES } from './data.js';
 import { isoDate, orderTubeGroups, tubeBarcodes, fmtDate } from './logic.js';
 
-const KEY = 'genomed-lkp-demo-v1';
+const KEY = 'genomed-lkp-demo-v2'; // v2: real catalog codes (old v1 stores hold removed codes)
 export const TODAY = isoDate(new Date());
 export const nowStamp = () => {
   const d = new Date();

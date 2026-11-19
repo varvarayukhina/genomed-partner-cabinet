@@ -146,7 +146,7 @@ function TestPicker({ codes, onAdd, error }) {
         autocomplete="off"
         aria-invalid=${error ? 'true' : undefined}
         aria-describedby=${error ? 't-search-err' : 't-search-hint'}
-        placeholder="Название, код или ген: НИПТ, 0402, BRCA1"
+        placeholder="Название, код или ген: НИПТ, 0001, BRCA1"
         value=${q}
         onInput=${(e) => {
           setQ(e.target.value);

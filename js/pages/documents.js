@@ -73,11 +73,11 @@ function Services({ data, total }) {
   return html`<table class="cdoc__t">
     <colgroup>
       <col style="width:5%" />
-      <col style="width:8%" />
+      <col style="width:7%" />
       <col />
-      <col style="width:9%" />
+      <col style="width:8%" />
+      <col style="width:12%" />
       <col style="width:13%" />
-      <col style="width:15%" />
     </colgroup>
     <thead>
       <tr>

@@ -30,7 +30,7 @@ assert.equal(validateDob('12.03.1994', '2026-11-17'), '');
 assert.equal(maskPhone('89001234567'), '+7 (900) 123-45-67');
 
 // #11 tubes come from tests: NIPT + thrombophilia = 1 Streck + 1 EDTA; two PCR tests share one EDTA tube
-let t = aggregateTubes(['1724', '0402'], CATALOG);
+let t = aggregateTubes(['1724', '0001'], CATALOG);
 assert.deepEqual(
   t.map((x) => [x.tube, x.qty]),
   [
@@ -38,18 +38,18 @@ assert.deepEqual(
     ['edta', 1],
   ],
 );
-t = aggregateTubes(['0402', '0002', '0554'], CATALOG); // pcr pool shares, ngs pool separate
+t = aggregateTubes(['0001', '0002', '0554'], CATALOG); // pcr pool shares, ngs pool separate
 assert.deepEqual(
   t.map((x) => [x.tube, x.qty]),
   [['edta', 2]],
 );
-t = aggregateTubes(['0005'], CATALOG, { '0005': 'buccal' }); // chosen alternative biomaterial
+t = aggregateTubes(['2288'], CATALOG, { '2288': 'buccal' }); // chosen alternative biomaterial
 assert.deepEqual(
   t.map((x) => x.tube),
   ['buccal'],
 );
-assert.equal(aggregateTubes(['1105'], CATALOG)[0].qty, 2); // Panorama needs two tubes
-const groups = orderTubeGroups(['0020'], CATALOG, {}, [{ role: 'Ребёнок', forCode: '0020' }]);
+assert.equal(aggregateTubes(['0498'], CATALOG)[0].qty, 2); // Panorama needs two tubes
+const groups = orderTubeGroups(['2288'], CATALOG, {}, [{ role: 'Ребёнок', forCode: '2288' }]);
 assert.deepEqual(
   groups.map((g) => g.who),
   [0, 1],
@@ -94,5 +94,5 @@ assert.ok(toCsv([['a;b', 'c']]).startsWith('\uFEFF"a;b";c'));
 console.log('logic: all checks passed');
 import { addTest, removeTest } from '../js/logic.js';
 assert.deepEqual(addTest([], '1724', CATALOG), ['1724', '1681']);
-assert.deepEqual(removeTest(['1724', '1681', '0402'], '1724', CATALOG), ['0402']);
+assert.deepEqual(removeTest(['1724', '1681', '0001'], '1724', CATALOG), ['0001']);
 console.log('bundles: ok');

@@ -103,7 +103,7 @@ export function Catalog({ q: q0 = '' }) {
       <input
         type="search"
         aria-label="Поиск исследований"
-        placeholder="Название, код теста или ген: например, НИПТ, 0402, BRCA1"
+        placeholder="Название, код теста или ген: например, НИПТ, 0001, BRCA1"
         value=${q}
         onInput=${(e) => setQ(e.target.value)}
       />

@@ -6,9 +6,9 @@ import { CATALOG, TUBES, PREANALYTICS, LIBRARY, MANAGERS, SUPPORT_PHONE, CONSUMA
 import { fmtDate, plural, matchTest, norm, addDays, fromIso } from '../logic.js';
 import { addToDraft } from '../flow.js';
 
-const DemoNote = ({ children }) => html`<div class="demo-note"><${Icon} name="info" /><span>${children}</span></div>`;
 
 /* ---------- Преаналитика: by tube, searchable by test ---------- */
+const PREANALYTICS_PDF = LIBRARY.find((d) => d.url.endsWith('/p1.pdf')).url;
 export function Preanalytics({ tube }) {
   const [q, setQ] = useState('');
   const hit = q ? CATALOG.filter((t) => matchTest(t, q)) : [];
@@ -20,9 +20,10 @@ export function Preanalytics({ tube }) {
         <p class="page__sub">Введите код или название исследования, чтобы увидеть нужную пробирку.</p>
       </div>
     </div>
-    <${DemoNote}
-      >Тексты преаналитики в демо-версии условные. Перед запуском их заменят на действующую инструкцию лаборатории.<//
-    >
+    <p class="soft" style="margin:-6px 0 16px">
+      По «Преаналитике Геномед» (редакция 03/2024). Полный документ с упаковкой и ограничениями по
+      приёму:${' '}<a href=${PREANALYTICS_PDF} target="_blank" rel="noopener">скачать PDF</a>.
+    </p>
     <div class="gsearch" style="max-width:560px;margin-bottom:18px">
       <${Icon} name="search" />
       <input
@@ -42,6 +43,18 @@ export function Preanalytics({ tube }) {
         : 'Исследование не найдено.'}
     </p>`}
     <div class="stack">
+      ${!q &&
+      html`<section class="card" aria-labelledby="h-mark">
+        <div class="card__head"><h2 id="h-mark">Маркировка пробирок</h2></div>
+        <div class="card__pad">
+          <ul class="bullets">
+            <li>На пробирке от руки: ФИО, дата рождения, дата забора. Без маркировки материал не принимают.</li>
+            <li>Штрих-код — строго вертикально на заводскую наклейку, не меньше 8 мм от крышки.</li>
+            <li>Не заклеивать срок годности, на Streck — ещё и номер лота. Прозрачную полосу оставить открытой.</li>
+            <li>Такой же штрих-код — на бланке заказа: кабинет печатает его на бланке сам.</li>
+          </ul>
+        </div>
+      </section>`}
       ${tubes.map((k) => {
         const used = CATALOG.filter((t) => t.bm.some((b) => b.tube === k));
         return html`<section class="card ${tube === k ? 'flash' : ''}" id=${`tube-${k}`} aria-labelledby=${`h-${k}`}>
@@ -110,20 +123,17 @@ export function Promo() {
 
 /* ---------- Библиотека ---------- */
 const LIB_TYPES = [
-  'Бланки направлений',
-  'Брошюры для пациентов',
-  'Памятки',
-  'Презентации',
-  'Видео и вебинары',
-  'Логотипы и баннеры',
-  'Документы',
+  'Инструкции для медсестёр',
+  'Преаналитика',
+  'Бланки и согласия',
+  'Для врачей',
+  'Для пациентов',
+  'Образцы заключений',
 ];
 const docIcon = (t) =>
   ({
-    'Видео и вебинары': ['video', 't-video'],
-    Презентации: ['presentation', 't-pres'],
-    Документы: ['file-check', 't-doc'],
-    'Логотипы и баннеры': ['image', ''],
+    'Для врачей': ['presentation', 't-pres'],
+    'Бланки и согласия': ['file-check', 't-doc'],
   })[t] || ['file-text', ''];
 
 export function Library() {
@@ -132,8 +142,7 @@ export function Library() {
   const list = LIBRARY.filter(
     (d) => (!type || d.type === type) && (!q || norm(`${d.title} ${d.type}`).includes(norm(q))),
   );
-  const top = [...LIBRARY].sort((a, b) => b.downloads - a.downloads).slice(0, 3);
-  const get = (d) => toast(`Демо: «${d.title}» скачается после подключения файлов лаборатории.`, { icon: 'file-down' });
+  const top = LIBRARY.filter((d) => d.top);
   return html`<div class="page">
     <div class="page__head">
       <div><h1>Библиотека</h1></div>
@@ -162,22 +171,13 @@ export function Library() {
               return html`<div class="doc">
                 <span class="doc__icon ${cls}"><${Icon} name=${ic} /></span>
                 <div>
-                  <div class="doc__title">
-                    ${d.title}${d.badge === 'new'
-                      ? html`<span class="tag tag--new">Новое</span>`
-                      : d.badge === 'updated'
-                        ? html`<span class="tag tag--promo">Обновлено ${fmtDate(addDays(TODAY, -d.updatedDays))}</span>`
-                        : null}
-                  </div>
-                  <div class="doc__meta">${d.type} · ${d.format}${d.size ? ` · ${d.size}` : ''}</div>
+                  <div class="doc__title">${d.title}</div>
+                  <div class="doc__meta">${d.type} · ${d.format}, ${d.size} · обновлён ${fmtDate(d.updated)}</div>
                 </div>
                 <div class="rowi__act">
-                  <button class="btn btn--line btn--sm" onClick=${() => get(d)}>
-                    <${Icon} name=${d.type === 'Видео и вебинары' ? 'play' : 'download'} />${d.type ===
-                    'Видео и вебинары'
-                      ? 'Смотреть'
-                      : 'Скачать'}
-                  </button>
+                  <a class="btn btn--line btn--sm" href=${d.url} target="_blank" rel="noopener"
+                    ><${Icon} name="download" />Скачать</a
+                  >
                 </div>
               </div>`;
             })}
@@ -197,13 +197,14 @@ export function Library() {
           >
         </section>
         <section class="card card__pad stack" style="gap:10px" aria-labelledby="top-h">
-          <h3 id="top-h">Часто скачивают</h3>
+          <h3 id="top-h">Нужно чаще всего</h3>
           ${top.map(
             (d) =>
-              html`<button class="linkish" style="justify-content:flex-start;text-align:left" onClick=${() => get(d)}>
+              html`<a class="linkish" style="justify-content:flex-start;text-align:left" href=${d.url} target="_blank" rel="noopener">
                 <${Icon} name="file-text" />${d.title}
-              </button>`,
+              </a>`,
           )}
+          <p class="muted">Все материалы — с${' '}<a href="https://genomed.ru/informaczionnye-materialy/" target="_blank" rel="noopener">genomed.ru</a>.</p>
         </section>
       </div>
     </div>

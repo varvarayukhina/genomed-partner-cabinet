@@ -2114,6 +2114,12 @@ dialog.dlg[open] {
   align-items: start;
   margin-top: 20px;
 }
+.bullets {
+  margin: 0;
+  padding-left: 1.2em;
+  display: grid;
+  gap: 8px;
+}
 .kv {
   margin: 0;
   display: grid;
@@ -2883,9 +2889,15 @@ dialog.dlg[open] {
   font-size: 9pt;
   color: #333;
 }
-.pdoc .ids p {
-  margin: 0 0 3mm;
+.pdoc.ids p {
+  margin: 0 0 0.7mm;
+  font-size: 8.8pt;
+  line-height: 1.3;
   text-align: justify;
+}
+.pdoc.ids .sign {
+  margin-top: 7mm;
+  break-inside: avoid;
 }
 /* closing documents: header as in Genomed emails, quiet tables, ЭДО signatures */
 @media print {
@@ -3006,7 +3018,7 @@ dialog.dlg[open] {
 }
 .cdoc .cdoc__t th,
 .cdoc .cdoc__t td {
-  padding: 1.2mm 2.5mm;
+  padding: 1mm 2mm;
   border: 0;
   border-bottom: 0.5pt solid #dce6f5;
   text-align: left;
