@@ -220,15 +220,19 @@ const who = (o, t) =>
 
 const DOCS = { blank: [Blank, 'бланк заказа'], ids: [Ids, 'ИДС Panorama'], labels: [Labels, 'этикетки'] };
 
-export function printDocs(order, docs) {
+export function printNode(node) {
   const root = document.getElementById('print-root');
-  const list = docs.filter((d) => d !== 'labels' || order.tubes.length);
-  if (!list.length) return;
-  render(html`${list.map((d) => html`<${DOCS[d][0]} order=${order} />`)}`, root);
-  markPrinted(order, list.map((d) => DOCS[d][1]).join(', '));
+  render(node, root);
   addEventListener('afterprint', () => render(null, root), { once: true });
   // let the barcodes paint before the dialog snapshots the page
   requestAnimationFrame(() => setTimeout(() => window.print(), 60));
+}
+
+export function printDocs(order, docs) {
+  const list = docs.filter((d) => d !== 'labels' || order.tubes.length);
+  if (!list.length) return;
+  printNode(html`${list.map((d) => html`<${DOCS[d][0]} order=${order} />`)}`);
+  markPrinted(order, list.map((d) => DOCS[d][1]).join(', '));
 }
 
 export const needsIds = (order) => order.tests.some((t) => testOf(t.code)?.ids === 'panorama');

@@ -1,7 +1,7 @@
 // DEMO DATA. Every name, price, code, phone and barcode here is invented for the prototype,
 // except the public Геномед client-service phone. Preanalytics texts are placeholders:
 // replace them from the lab's current instructions before showing to partners.
-import { addDays, addWorkdays, orderTubeGroups, tubeBarcodes } from './logic.js';
+import { addDays, addWorkdays, orderTubeGroups, tubeBarcodes, pad } from './logic.js';
 
 export const TUBES = {
   streck: {
@@ -1047,7 +1047,8 @@ export function seed(today) {
         { name: 'Ольга Чернова', role: 'Регистратор', access: 'Заказы, печать, курьер' },
         { name: 'Марина Лаптева', role: 'Процедурная медсестра', access: 'Заказы, печать, курьер, расходники' },
         { name: 'Иванова Е. П.', role: 'Врач', access: 'Заказы, заключения' },
-        { name: 'Сергей Гусев', role: 'Администратор', access: 'Все разделы, сверка' },
+        { name: 'Сергей Гусев', role: 'Администратор', access: 'Все разделы' },
+        { name: 'Татьяна Белова', role: 'Бухгалтер', access: 'Закрывающие документы' },
       ],
     },
     settings: {
@@ -1070,3 +1071,69 @@ function lastDayOfMonth(iso) {
   const d = new Date(y, m, 0);
   return `${y}-${String(m).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
+
+/* ---------- аналитика и закрывающие документы (демо) ---------- */
+// Упрощение: история за 12 полных месяцев считается от даты по фиксированному зерну, чтобы цифры не
+// прыгали между открытиями. В месяцах, где уже есть заказы из ORDERS, синтетика добирает объём до обычного.
+// Средние по другим клиникам условные. В рабочей версии всё это отдаёт лабораторная система.
+export const MONTHS = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+const MIX = [['1724', 9], ['0402', 7], ['1105', 6], ['0006', 5], ['0005', 4], ['0002', 4], ['1438', 3], ['0013', 2], ['0721', 2], ['0856', 1]];
+export const RETAKE_REASONS = ['Гемолиз', 'Сгусток в пробирке', 'Мало биоматериала', 'Низкая фетальная фракция', 'Превышен срок доставки', 'Данные на пробирке и бланке не совпадают'];
+const RETAKE_W = [5, 4, 3, 2, 2, 1];
+
+export function history(today) {
+  let x = 41203;
+  const rnd = () => (x = (x * 16807) % 2147483647) / 2147483647;
+  const pick = (w) => {
+    let r = rnd() * w.reduce((a, b) => a + b, 0);
+    return w.findIndex((v) => (r -= v) < 0);
+  };
+  const seeded = {};
+  for (const o of ORDERS)
+    if (!['draft', 'cancelled'].includes(o[4])) {
+      const ym = addDays(today, -o[1]).slice(0, 7);
+      seeded[ym] = (seeded[ym] || 0) + 1;
+    }
+  let num = Math.min(...ORDERS.map((o) => o[0]));
+  const [y0, m0] = today.split('-').map(Number);
+  const out = [];
+  for (let i = 1; i <= 12; i++) {
+    const d = new Date(y0, m0 - 1 - i, 1);
+    const y = d.getFullYear();
+    const m = d.getMonth() + 1;
+    const ym = `${y}-${pad(m)}`;
+    const days = new Date(y, m, 0).getDate();
+    const total = Math.round(30 + (12 - i) * 0.8 + rnd() * 9);
+    const n = Math.max(0, total - (seeded[ym] || 0));
+    const codes = Array.from({ length: n }, () => MIX[pick(MIX.map((q) => q[1]))][0]);
+    num -= n;
+    const reasons = RETAKE_REASONS.map(() => 0);
+    const retakes = Math.max(1, Math.round(total * (0.022 + rnd() * 0.02)));
+    for (let k = 0; k < retakes; k++) reasons[pick(RETAKE_W)]++;
+    out.unshift({
+      ym,
+      y,
+      m,
+      orders: codes.map((code, k) => ({ id: `ЗК-${num + k}`, date: `${ym}-${pad(1 + Math.floor((k / n) * days))}`, code })),
+      reasons,
+      retakeShare: retakes / total,
+      onTimeShare: 1 - (0.02 + rnd() * 0.05),
+      lkpShare: Math.min(0.92, 0.6 + (12 - i) * 0.025 + rnd() * 0.04),
+    });
+  }
+  return out;
+}
+
+// Обезличенные средние по клиникам-партнёрам за тот же период (условные)
+export const BENCH = {
+  all: { label: 'Все партнёры', long: 'все клиники-партнёры Геномед', retake: 0.026, onTime: 0.93, lkp: 0.64 },
+  region: { label: 'Москва и область', long: 'клиники-партнёры в Москве и области', retake: 0.029, onTime: 0.95, lkp: 0.71 },
+};
+
+// ПГТ-А: доля эуплоидных эмбрионов по возрасту пациентки, %; [ваша клиника, все партнёры, регион]
+export const PGT_DEMO = {
+  12: { embryos: 412, groups: [[58, 55, 57], [47, 45, 46], [32, 31, 33], [18, 19, 20], [8, 9, 9]], noResult: [3.1, 2.4, 2.2], mosaic: [11, 12, 12] },
+  6: { embryos: 214, groups: [[60, 55, 57], [46, 45, 47], [30, 31, 33], [17, 19, 20], [7, 9, 9]], noResult: [2.8, 2.4, 2.3], mosaic: [10, 12, 12] },
+  3: { embryos: 103, groups: [[61, 56, 57], [48, 45, 46], [31, 31, 32], [19, 19, 21], [9, 9, 10]], noResult: [1.9, 2.3, 2.2], mosaic: [12, 12, 11] },
+};
+export const PGT_AGES = ['до 35 лет', '35–37 лет', '38–40 лет', '41–42 года', 'старше 42 лет'];

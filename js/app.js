@@ -11,6 +11,8 @@ import { OrderForm } from './pages/order-form.js';
 import { Orders, OrderPage, Retakes, Results, OrderDialogs } from './pages/orders.js';
 import { Delivery, Supplies } from './pages/logistics.js';
 import { Preanalytics, Promo, Library, Managers, Notifications, Profile } from './pages/info.js';
+import { Analytics } from './pages/analytics.js';
+import { Documents } from './pages/documents.js';
 
 /* ---------- sidebar ---------- */
 const NAV = [
@@ -26,6 +28,8 @@ const NAV = [
   ['promo', 'megaphone', 'Промо и акции'],
   ['library', 'book-open', 'Библиотека'],
   '-',
+  ['analytics', 'chart-column', 'Аналитика'],
+  ['documents', 'receipt-text', 'Закрывающие документы'],
   ['managers', 'users', 'Мои менеджеры'],
   ['notifications', 'bell', 'Уведомления'],
   ['profile', 'user', 'Профиль клиники'],
@@ -329,6 +333,10 @@ function Page({ route }) {
       return html`<${Promo} />`;
     case 'library':
       return html`<${Library} />`;
+    case 'analytics':
+      return html`<${Analytics} />`;
+    case 'documents':
+      return html`<${Documents} />`;
     case 'managers':
       return html`<${Managers} />`;
     case 'notifications':
@@ -355,6 +363,8 @@ const TITLES = {
   preanalytics: 'Преаналитика',
   promo: 'Промо и акции',
   library: 'Библиотека',
+  analytics: 'Аналитика',
+  documents: 'Закрывающие документы',
   managers: 'Мои менеджеры',
   notifications: 'Уведомления',
   profile: 'Профиль клиники',
